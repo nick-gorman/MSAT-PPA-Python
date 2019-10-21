@@ -1,12 +1,15 @@
 import pandas as pd
 import residuals
 import tariffs
+import ppa
+import numpy as np
 
 
-def run_scenario_from_row(scenario_row, load_profiles, charge_set):
+def run_scenario_from_row(scenario_row, price_profiles, load_profiles, charge_set):
     """
     Calculate retail and ppa costs for a given row in the scenario table
 
+    :param price_profiles:
     :param scenario_row: pandas DataFrame row with following columns 'PPA', 'Wholesale_Price_ID',
            'Average_Wholesale_Price', 'Wholesale_Exposure_Volume', 'Load_ID', 'Generator_ID', 'PPA_Volume',
            'PPA_Price', 'Excess_RE_Purchase_Price', 'Excess_RE_Sale_Price', 'LGC_Volume_Type', 'LGC_Purhcase_Volume',
@@ -21,11 +24,18 @@ def run_scenario_from_row(scenario_row, load_profiles, charge_set):
 
     load_id = scenario_row['Load_ID']
     generator_id = scenario_row['Generator_ID']
-    load_profiles['DateTime'] = pd.to_datetime(load_profiles["DateTime"])
+    price_id = scenario_row['Wholesale_Price_ID']
+
+    load_profiles['DateTime'] = pd.to_datetime(load_profiles["DateTime"], format="%d/%m/%Y %H:%M")
     load_profiles[load_id] = pd.to_numeric(load_profiles[load_id])
     load_profiles[generator_id] = pd.to_numeric(load_profiles[generator_id])
+
+    price_profiles['DateTime'] = pd.to_datetime(price_profiles["DateTime"])
+    price_profiles[price_id] = pd.to_numeric(price_profiles[price_id])
+
     residual_profiles = residuals.calc(load_profiles=load_profiles, load_id=load_id, generator_id=generator_id)
-    costs = tariffs.calc_tou_set(tou_set=charge_set, load_profiles=residual_profiles, contract_type=scenario_row['PPA'],
-                                 wholesale_volume=scenario_row['Wholesale_Exposure_Volume'])
-    retail_cost = costs['Cost'].sum()
-    return retail_cost
+    retail_costs = tariffs.calc_tou_set(tou_set=charge_set, load_profiles=residual_profiles, contract_type=scenario_row['PPA'],
+                                        wholesale_volume=scenario_row['Wholesale_Exposure_Volume'])
+    retail_cost = retail_costs['Cost'].sum()
+    ppa_cost = ppa.calc_by_row(scenario_row, price_profiles[price_id], residual_profiles)
+    return retail_cost, ppa_cost
