@@ -1,6 +1,7 @@
 import numpy as np
 from datetime import timedelta
 
+
 def calc_by_row(row, price_profile, residual_profiles):
     """
     Calaculate the PPA cost by calling the the calc function and selecting the required data from the scenario row.
@@ -11,7 +12,8 @@ def calc_by_row(row, price_profile, residual_profiles):
     :return: float
     """
     cost = calc(row['PPA'], row['PPA_Volume'], row['Wholesale_Exposure_Volume'], row['PPA_Price'],
-                row['Excess_RE_Purchase_Price'], row['Excess_RE_Sale_Price'], row['Load_MLF'], row['Load_DLF'],
+                row['Excess_RE_Purchase_Price'], row['Excess_RE_Sale_Price'], row['LGC_Volume_Type'],
+                row['LGC_Purchase_Volume'], row['LGC_Purchase_Price'], row['Load_MLF'], row['Load_DLF'],
                 row['Generator_MLF'], row['Generator_DLF'], row['Target_Period'], row['Yearly_Target_MWh'],
                 row['Yearly_Short_Fall_Penalty_MWh'], row['Yearly_LGC_target_LGC'],
                 row['Yearly_LGC_short_fall_penalty_LGC'], row['Average_Wholesale_Price'],
@@ -20,11 +22,15 @@ def calc_by_row(row, price_profile, residual_profiles):
 
 
 def calc(contract_type, ppa_volume, wholesale_volume, contract_price, excess_buy_price, excess_sell_price,
-         load_mlf, load_dlf, gen_mlf, gen_dlf, penalty_period, yearly_target_volume_mwh, penalty_rate_mwh,
+         lgc_volume_type, lgc_volume, lgc_price, load_mlf, load_dlf, gen_mlf, gen_dlf, penalty_period,
+         yearly_target_volume_mwh, penalty_rate_mwh,
          yearly_target_volume_lgc, penalty_rate_lgc, average_wholesale_price, price_profile, residual_profiles):
     """
     Calculate the PPA costs by using the contract type to select the correct calculation method.
 
+    :param lgc_price:
+    :param lgc_volume:
+    :param lgc_volume_type:
     :param contract_type: string, determines how the PPA costs are calculated should be one of,
                         'Off-site - Contract for Difference', 'Off-site - Tariff Pass Through',
                         'Off-site - Physical Hedge', 'On-site RE Generator' or 'No PPA'
@@ -40,6 +46,9 @@ def calc(contract_type, ppa_volume, wholesale_volume, contract_price, excess_buy
     :param residual_profiles: pandas dataframe, the set of residual volume profiles
     :return: float
     """
+    if contract_type == 'Off-site - Physical Hedge':
+        x=1
+
     scaled_price_profile = price_profile * (average_wholesale_price / np.mean(price_profile))
 
     ppa_volume_profile = calc_ppa_volume_profile(ppa_volume, residual_profiles, contract_type)
@@ -73,24 +82,27 @@ def calc(contract_type, ppa_volume, wholesale_volume, contract_price, excess_buy
 
     if contract_type != 'No PPA':
         excess_payment = excess_sale_calc(excess_to_sell, excess_sell_price)
-        penalty_payment_mwh = penalty_calc(residual_profiles, penalty_period, yearly_target_volume_mwh, penalty_rate_mwh)
+        penalty_payment_mwh = penalty_calc(residual_profiles, penalty_period, yearly_target_volume_mwh,
+                                           penalty_rate_mwh)
         penalty_payment_lgc = penalty_calc(residual_profiles, 'Yearly', yearly_target_volume_lgc, penalty_rate_lgc)
+        lgc_cost = lgc_cost_calc(lgc_volume_type, lgc_volume, lgc_price, residual_profiles)
     else:
         excess_payment = 0
         penalty_payment_lgc = 0
         penalty_payment_mwh = 0
+        lgc_cost = 0
 
-    cost = ppa_cost + wholesale_cost + excess_cost - excess_payment - wholesale_payment - penalty_payment_mwh - \
-           penalty_payment_lgc
+    cost = ppa_cost + wholesale_cost + excess_cost + lgc_cost - excess_payment - wholesale_payment - \
+           penalty_payment_mwh - penalty_payment_lgc
 
-    return cost/1000
+    return cost / 1000
 
 
 # Profile calc functions.
 
 
 def calc_ppa_volume_profile(ppa_volume, residual_profiles, contract_type):
-    if ppa_volume == 'RE Uptill Load' or contract_type == 'On-site RE Generator' :
+    if ppa_volume == 'RE Uptill Load' or contract_type == 'On-site RE Generator':
         volume_profile = residual_profiles['Used RE']
     else:
         volume_profile = residual_profiles['RE Generator']
@@ -132,6 +144,7 @@ def flat_rate_calc(ppa_volume_profile, price_profile, contract_price, mlf, dlf):
     cost = np.sum(contract_price * ppa_volume_profile * mlf * dlf)
     return cost
 
+
 def flat_rate_onsite_calc(ppa_volume_profile, price_profile, contract_price, mlf, dlf):
     cost = np.sum(contract_price * ppa_volume_profile)
     return cost
@@ -170,7 +183,7 @@ def wholesale(wholesale_volume_profile, price_profile, mlf, dlf):
 
 
 wholesale_purchase_methods = {'Off-site - Contract for Difference': wholesale,
-                             'Off-site - Physical Hedge': wholesale}
+                              'Off-site - Physical Hedge': wholesale}
 wholesale_sale_methods = {'Off-site - Physical Hedge': wholesale}
 
 
@@ -183,11 +196,26 @@ def penalty_calc(generator_profile, period, yearly_target_volume, penalty_rate):
         target = yearly_target_volume
         payment = np.maximum((target - np.sum(generator_profile['RE Generator'].sum())), 0) * penalty_rate
     elif period == 'Quarterly':
-        target = yearly_target_volume/4
+        target = yearly_target_volume / 4
         payment = np.sum(np.maximum(target - generator_profile.groupby(generator_profile.DateTime.dt.quarter)[
-                      'RE Generator'].sum(), 0) * penalty_rate)
+            'RE Generator'].sum(), 0) * penalty_rate)
     elif period == 'Monthly':
-        target = yearly_target_volume/12
+        target = yearly_target_volume / 12
         payment = np.sum(np.maximum(target - generator_profile.groupby(generator_profile.dmt.dt.month)[
-                      'RE Generator'].sum(), 0) * penalty_rate)
+            'RE Generator'].sum(), 0) * penalty_rate)
     return payment
+
+
+# LGC Purchase calculations
+
+
+def lgc_cost_calc(volume_type, volume, price, residual_profiles):
+    if volume_type == 'Frac RE':
+        cost = residual_profiles['RE Generator'].sum() * volume * price
+    elif volume_type == 'Frac Load':
+        cost = residual_profiles['Load'].sum() * volume * price
+    elif volume_type == 'RE Uptill load':
+        cost = min(residual_profiles['RE Generator'].sum(), residual_profiles['Load'].sum()) * price
+    elif volume_type == 'Fixed':
+        cost = volume * price
+    return cost

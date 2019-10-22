@@ -1,5 +1,6 @@
 import numpy as np
 from datetime import datetime, time, timedelta
+import pandas as pd
 
 
 def calc_tou_set(tou_set, load_profiles, contract_type, wholesale_volume):
@@ -33,7 +34,8 @@ def calc_tou_set(tou_set, load_profiles, contract_type, wholesale_volume):
 
     # Apply the tou_calc function to the tou_set to find the cost of each charge.
     vector_tou_calc = np.vectorize(tou_calc, excluded=['load_profiles'])
-    tou_set['Cost'] = vector_tou_calc(volume_type=tou_set['Volume Type'], rate=tou_set['Rate'], mlf=tou_set['MLF'],
+    tou_set['Cost'] = vector_tou_calc(volume_type=tou_set['Volume Type'], charge_type=tou_set['Charge Type'],
+                                      rate=tou_set['Rate'], mlf=tou_set['MLF'],
                                       dlf=tou_set['DLF'], start_month=tou_set['Start Month'],
                                       end_month=tou_set['End Month'], start_weekday=tou_set['Start Weekday'],
                                       end_weekday=tou_set['End Weekday'], start_hour=tou_set['Start Hour'],
@@ -43,8 +45,8 @@ def calc_tou_set(tou_set, load_profiles, contract_type, wholesale_volume):
     return tou_set
 
 
-def tou_calc(volume_type, rate, mlf, dlf, start_month, end_month, start_weekday, end_weekday, start_hour, end_hour,
-             load_profiles, load_id):
+def tou_calc(volume_type, charge_type, rate, mlf, dlf, start_month, end_month, start_weekday, end_weekday, start_hour,
+             end_hour, load_profiles, load_id):
     """
     Calculates the cost of tariff charges.
 
@@ -65,20 +67,39 @@ def tou_calc(volume_type, rate, mlf, dlf, start_month, end_month, start_weekday,
 
     """
 
-    load_profiles['dmt'] = load_profiles.DateTime - timedelta(minutes=15)
+    if mlf == 0:
+        mlf = 1
+    if dlf == 0:
+        dlf = 1
 
-    trimmed_load_profile = load_profiles[(load_profiles.dmt.dt.month >= start_month) &
-                                         (load_profiles.dmt.dt.month <= end_month) &
-                                         (load_profiles.dmt.dt.dayofweek + 1 >= start_weekday) &
-                                         (load_profiles.dmt.dt.dayofweek + 1 <= end_weekday) &
-                                         (((load_profiles.DateTime.dt.time > time(hour=start_hour)) &
-                                           (load_profiles.DateTime.dt.time <= time(hour=end_hour))) |
-                                          ((start_hour > end_hour) &
-                                           ((load_profiles.DateTime.dt.time > time(hour=start_hour)) |
-                                            (load_profiles.DateTime.dt.time <= time(hour=end_hour)))))]
 
-    energy_in_mwh = trimmed_load_profile[load_id].sum() / 1000
+    if volume_type == "Energy ($/MWh)":
 
-    cost = energy_in_mwh * rate * mlf * dlf
-    print('hit')
+        load_profiles['dmt'] = load_profiles.DateTime - timedelta(minutes=15)
+
+        trimmed_load_profile = load_profiles[(load_profiles.dmt.dt.month >= start_month) &
+                                             (load_profiles.dmt.dt.month <= end_month) &
+                                             (load_profiles.dmt.dt.dayofweek + 1 >= start_weekday) &
+                                             (load_profiles.dmt.dt.dayofweek + 1 <= end_weekday) &
+                                             (((load_profiles.dmt.dt.hour >= start_hour) &
+                                               (load_profiles.dmt.dt.hour <= end_hour)) |
+                                              ((start_hour > end_hour) &
+                                               ((load_profiles.dmt.dt.hour >= start_hour) |
+                                                (load_profiles.dmt.dt.hour <= end_hour))))]
+
+        energy_in_mwh = trimmed_load_profile[load_id].sum()
+
+        if charge_type == 'Energy':
+            cost = energy_in_mwh * rate * mlf * dlf / 1000
+        elif charge_type == 'Network':
+            cost = energy_in_mwh * rate / 1000
+        elif charge_type in ['Market', 'Environmental']:
+            cost = energy_in_mwh * rate * dlf / 1000
+
+    elif volume_type == "Fixed ($/day)":
+        cost = (len(load_profiles[pd.notna(load_profiles[load_id])])/48) * rate
+
+    elif volume_type == "Max Demand ($/MVA/day)":
+        cost = load_profiles[load_id].max() * 2 * (len(load_profiles[pd.notna(load_profiles[load_id])])/48) * rate/1000
+
     return cost
