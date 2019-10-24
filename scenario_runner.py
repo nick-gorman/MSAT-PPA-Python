@@ -22,6 +22,9 @@ def run_scenario_from_row(scenario_row, price_profiles, load_profiles, charge_se
     :return: retail_cost: float
     """
 
+    if scenario_row['Scenario ID'] == 32:
+        x=1
+
     load_id = scenario_row['Load_ID']
     generator_id = scenario_row['Generator_ID']
     price_id = scenario_row['Wholesale_Price_ID']
@@ -39,4 +42,5 @@ def run_scenario_from_row(scenario_row, price_profiles, load_profiles, charge_se
     retail_cost = retail_costs['Cost'].sum()
     ppa_cost = ppa.calc_by_row(scenario_row, price_profiles[price_id], residual_profiles)
     print(scenario_row['Scenario ID'])
+
     return retail_cost, ppa_cost

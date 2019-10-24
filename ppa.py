@@ -46,8 +46,6 @@ def calc(contract_type, ppa_volume, wholesale_volume, contract_price, excess_buy
     :param residual_profiles: pandas dataframe, the set of residual volume profiles
     :return: float
     """
-    if contract_type == 'Off-site - Physical Hedge':
-        x=1
 
     scaled_price_profile = price_profile * (average_wholesale_price / np.mean(price_profile))
 
@@ -217,5 +215,5 @@ def lgc_cost_calc(volume_type, volume, price, residual_profiles):
     elif volume_type == 'RE Uptill load':
         cost = min(residual_profiles['RE Generator'].sum(), residual_profiles['Load'].sum()) * price
     elif volume_type == 'Fixed':
-        cost = volume * price
+        cost = volume * price * 1000
     return cost
