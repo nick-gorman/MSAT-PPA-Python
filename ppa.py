@@ -21,10 +21,11 @@ def calc_by_row(row, price_profile, residual_profiles):
     return cost
 
 
-def calc(contract_type, ppa_volume, wholesale_volume, contract_price, excess_buy_price, excess_sell_price,
-         lgc_volume_type, lgc_volume, lgc_price, load_mlf, load_dlf, gen_mlf, gen_dlf, penalty_period,
-         yearly_target_volume_mwh, penalty_rate_mwh,
-         yearly_target_volume_lgc, penalty_rate_lgc, average_wholesale_price, price_profile, residual_profiles):
+def calc(contract_type, ppa_volume, contract_price, residual_profiles, wholesale_volume=None,
+         excess_buy_price=None, excess_sell_price=None,
+         lgc_volume_type=None, lgc_volume=None, lgc_price=None, load_mlf=1.0, load_dlf=1.0, gen_mlf=1.0, gen_dlf=1.0,
+         penalty_period=None, yearly_target_volume_mwh=None, penalty_rate_mwh=None,
+         yearly_target_volume_lgc=None, penalty_rate_lgc=None, average_wholesale_price=None, price_profile=None ):
     """
     Calculate the PPA costs by using the contract type to select the correct calculation method.
 
@@ -47,7 +48,10 @@ def calc(contract_type, ppa_volume, wholesale_volume, contract_price, excess_buy
     :return: float
     """
 
-    scaled_price_profile = price_profile * (average_wholesale_price / np.mean(price_profile))
+    if average_wholesale_price is not None:
+        scaled_price_profile = price_profile * (average_wholesale_price / np.mean(price_profile))
+    else:
+        scaled_price_profile = price_profile
 
     ppa_volume_profile = calc_ppa_volume_profile(ppa_volume, residual_profiles, contract_type)
 
@@ -61,12 +65,12 @@ def calc(contract_type, ppa_volume, wholesale_volume, contract_price, excess_buy
     else:
         ppa_cost = 0.0
 
-    if contract_type in excess_methods:
+    if contract_type in excess_methods and excess_buy_price is not None:
         excess_cost = excess_methods[contract_type](residual_profiles['Excess RE'], excess_buy_price)
     else:
         excess_cost = 0.0
 
-    if contract_type in wholesale_purchase_methods:
+    if contract_type in wholesale_purchase_methods and wholesale_volume is not None:
         wholesale_cost = wholesale_purchase_methods[contract_type](wholesale_volume_profile, scaled_price_profile,
                                                                    load_mlf, load_dlf)
     else:
@@ -78,22 +82,26 @@ def calc(contract_type, ppa_volume, wholesale_volume, contract_price, excess_buy
     else:
         wholesale_payment = 0.0
 
+    excess_payment = 0
+    penalty_payment_lgc = 0
+    penalty_payment_mwh = 0
+    lgc_cost = 0
+
     if contract_type != 'No PPA':
-        excess_payment = excess_sale_calc(excess_to_sell, excess_sell_price)
-        penalty_payment_mwh = penalty_calc(residual_profiles, penalty_period, yearly_target_volume_mwh,
-                                           penalty_rate_mwh)
-        penalty_payment_lgc = penalty_calc(residual_profiles, 'Yearly', yearly_target_volume_lgc, penalty_rate_lgc)
-        lgc_cost = lgc_cost_calc(lgc_volume_type, lgc_volume, lgc_price, residual_profiles)
-    else:
-        excess_payment = 0
-        penalty_payment_lgc = 0
-        penalty_payment_mwh = 0
-        lgc_cost = 0
+        if excess_sell_price is not None:
+            excess_payment = excess_sale_calc(excess_to_sell, excess_sell_price)
+        if penalty_period is not None and yearly_target_volume_mwh is not None and penalty_rate_mwh is not None:
+            penalty_payment_mwh = penalty_calc(residual_profiles, penalty_period, yearly_target_volume_mwh,
+                                               penalty_rate_mwh)
+        if yearly_target_volume_lgc is not None and penalty_rate_lgc is not None:
+            penalty_payment_lgc = penalty_calc(residual_profiles, 'Yearly', yearly_target_volume_lgc, penalty_rate_lgc)
+        if lgc_volume_type is not None and lgc_volume is not None and lgc_price:
+            lgc_cost = lgc_cost_calc(lgc_volume_type, lgc_volume, lgc_price, residual_profiles)
 
-    cost = ppa_cost + wholesale_cost + excess_cost + lgc_cost - excess_payment - wholesale_payment - \
-           penalty_payment_mwh - penalty_payment_lgc
-
-    return cost / 1000
+    return {'PPA': ppa_cost, 'Wholesale cost': wholesale_cost, 'Cost of Excess RE': excess_cost,
+            'Payment from Excess RE': excess_payment, 'Payment from wholesale of RE': wholesale_payment,
+            'LGC purchase cost': lgc_cost, 'Generation shortfall penalty payment': penalty_payment_mwh,
+            'LGC shortfall penalty payment': penalty_payment_lgc}
 
 
 # Profile calc functions.
@@ -126,7 +134,7 @@ def calc_excess_that_could_be_sold(contract_type, ppa_volume, residual_profiles)
     elif contract_type in ['Off-site - Physical Hedge', 'On-site RE Generator']:
         excess_to_sell = residual_profiles['Excess RE']
     else:
-        excess_to_sell = residual_profiles['Empty']
+        excess_to_sell = 0.0
     return excess_to_sell
 
 

@@ -19,5 +19,4 @@ def calc(load_profiles, load_id, generator_id):
     residual_profiles['Black'] = np.maximum(residual_profiles['Load'] - residual_profiles['RE Generator'], 0)
     residual_profiles['Excess RE'] = np.maximum(residual_profiles['RE Generator'] - residual_profiles['Load'], 0)
     residual_profiles['Used RE'] = residual_profiles['RE Generator'] - residual_profiles['Excess RE']
-    residual_profiles['Empty'] = 0.0
     return residual_profiles
