@@ -17,8 +17,8 @@ Below some examples are used to demonstrate the basic functionality. It may be d
 in the future.
 
 # Examples
-1. [Contract for difference PPA and wholesale energy purchase](/Contract-for-difference-PPA-and-wholesale-energy-purchase)
-2. [Running PPA and Tariff calculations across scenarios](/Running-PPA-and-Tariff-calculations-across-scenarios)
+1. [Contract for difference PPA and wholesale energy purchase](#contract-for-difference-ppa-and-wholesale-energy-purchase)
+2. [Running PPA and Tariff calculations across scenarios](#Running-PPA-and-Tariff-calculations-across-scenarios)
 
 
 ## Contract for difference PPA and wholesale energy purchase
