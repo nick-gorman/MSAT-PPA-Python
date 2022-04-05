@@ -11,13 +11,16 @@ def calc_by_row(row, price_profile, residual_profiles):
     :param residual_profiles: pandas dataframe, the set of residual volume profiles
     :return: float
     """
-    cost = calc(row['PPA'], row['PPA_Volume'], row['Wholesale_Exposure_Volume'], row['PPA_Price'],
-                row['Excess_RE_Purchase_Price'], row['Excess_RE_Sale_Price'], row['LGC_Volume_Type'],
-                row['LGC_Purchase_Volume'], row['LGC_Purchase_Price'], row['Load_MLF'], row['Load_DLF'],
-                row['Generator_MLF'], row['Generator_DLF'], row['Target_Period'], row['Yearly_Target_MWh'],
-                row['Yearly_Short_Fall_Penalty_MWh'], row['Yearly_LGC_target_LGC'],
-                row['Yearly_LGC_short_fall_penalty_LGC'], row['Average_Wholesale_Price'],
-                price_profile, residual_profiles)
+    cost = calc(contract_type=row['PPA'], ppa_volume=row['PPA_Volume'], wholesale_volume=row['Wholesale_Exposure_Volume'],
+                contract_price=row['PPA_Price'], excess_buy_price=row['Excess_RE_Purchase_Price'],
+                excess_sell_price=row['Excess_RE_Sale_Price'], lgc_volume_type=row['LGC_Volume_Type'],
+                lgc_volume=row['LGC_Purchase_Volume'], lgc_price=row['LGC_Purchase_Price'], load_mlf=row['Load_MLF'],
+                load_dlf=row['Load_DLF'], gen_mlf=row['Generator_MLF'], gen_dlf=row['Generator_DLF'],
+                penalty_period=row['Target_Period'], yearly_target_volume_mwh=row['Yearly_Target_MWh'],
+                penalty_rate_mwh=row['Yearly_Short_Fall_Penalty_MWh'], yearly_target_volume_lgc=row['Yearly_LGC_target_LGC'],
+                penalty_rate_lgc=row['Yearly_LGC_short_fall_penalty_LGC'], average_wholesale_price=row['Average_Wholesale_Price'],
+                price_profile=price_profile, residual_profiles=residual_profiles)
+    cost = sum(cost.values())
     return cost
 
 

@@ -90,11 +90,11 @@ def tou_calc(volume_type, charge_type, rate, mlf, dlf, start_month, end_month, s
         energy_in_mwh = trimmed_load_profile[load_id].sum()
 
         if charge_type == 'Energy':
-            cost = energy_in_mwh * rate * mlf * dlf / 1000
+            cost = energy_in_mwh * rate * mlf * dlf
         elif charge_type == 'Network':
-            cost = energy_in_mwh * rate / 1000
+            cost = energy_in_mwh * rate
         elif charge_type in ['Market', 'Environmental']:
-            cost = energy_in_mwh * rate * dlf / 1000
+            cost = energy_in_mwh * rate * dlf
 
     elif volume_type == "Fixed ($/day)":
         cost = (len(load_profiles[pd.notna(load_profiles[load_id])])/48) * rate

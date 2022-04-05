@@ -22,9 +22,6 @@ def run_scenario_from_row(scenario_row, price_profiles, load_profiles, charge_se
     :return: retail_cost: float
     """
 
-    if scenario_row['Scenario ID'] == 32:
-        x=1
-
     load_id = scenario_row['Load_ID']
     generator_id = scenario_row['Generator_ID']
     price_id = scenario_row['Wholesale_Price_ID']
