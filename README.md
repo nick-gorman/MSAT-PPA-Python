@@ -3,7 +3,7 @@
 This python library replicates the functionality of the MS Excel based tool [Multi-factor Sensitivity Analysis Tool for 
 Renewable PPAs (MSAT-PPA)](http://www.ceem.unsw.edu.au/renewable-ppa-tool). MSAT-PPA was created with MS Excel to ensure
 it was accessible to large energy users, e.g. large business or local governments, who commonly use MS Excel for a wide
-variety of tasks. However, it can be hard to test the functionality for large spreadsheets to ensure there are no 
+variety of tasks. However, it can be hard to test the functionality of large spreadsheets to ensure there are no 
 errors. To provide the MSAT-PPA development team with confidence that the tool was performing as expected, MSAT-PPA was 
 replicated in Python and results between the two versions compared. Recently, some interest in using the Python 
 version of MSAT-PPA has been expressed, so we have published the code here to allow stakeholders to assess it.
