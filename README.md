@@ -17,8 +17,8 @@ Below some examples are used to demonstrate the basic functionality. It may be d
 in the future.
 
 # Examples
-1. [Contract for difference PPA and wholesale energy purchase](/Contract for difference PPA and wholesale energy purchase)
-2. [Running PPA and Tariff calculations across scenarios](/Running PPA and Tariff calculations across scenarios)
+1. [Contract for difference PPA and wholesale energy purchase](/Contract-for-difference-PPA-and-wholesale-energy-purchase)
+2. [Running PPA and Tariff calculations across scenarios](/Running-PPA-and-Tariff-calculations-across-scenarios)
 
 
 ## Contract for difference PPA and wholesale energy purchase
@@ -140,7 +140,7 @@ print(tariff_costs)
 This example demonstrates the use of the scenario calculation functionality. The details of the contract are the same 
 as the previous example, except we run two scenarios with different PPA strike prices. The scenario inputs are 
 defined in pandas DataFrame with each row defining the complete set of inputs for a given scenario. This is quite a 
-verbose way of defining the inputs, but the DataFrame could be contructed programtically to easily create a large 
+verbose way of defining the inputs, but the DataFrame could be constructed programmatically to easily create a large 
 number of scenarios.
 
 The steps in the example are as follows:
