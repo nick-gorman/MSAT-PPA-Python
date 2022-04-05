@@ -139,7 +139,7 @@ print(tariff_costs)
 ## Running PPA and Tariff calculations across scenarios
 This example demonstrates the use of the scenario calculation functionality. The details of the contract are the same 
 as the previous example, except we run two scenarios with different PPA strike prices. The scenario inputs are 
-defined in pandas DataFrame with each row defining the complete set of inputs for a given scenario. This is quite a 
+defined in a pandas DataFrame with each row defining the complete set of inputs for a given scenario. This is quite a 
 verbose way of defining the inputs, but the DataFrame could be constructed programmatically to easily create a large 
 number of scenarios.
 
